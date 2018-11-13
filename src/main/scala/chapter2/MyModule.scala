@@ -124,6 +124,8 @@ object MyModule {
   }
 
   def main(args: Array[String]): Unit = {
+    val t = List(1,2,3)
+    println(t.size)
     println(formatResult("absolute value", -42, abs))
     println(formatResult("factorial", 7, factorial))
   }
