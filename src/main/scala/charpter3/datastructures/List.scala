@@ -1,5 +1,7 @@
 package charpter3.datastructures
 
+import scala.annotation.tailrec
+
 /**
   * 单向链表
   *
@@ -38,6 +40,25 @@ object List {
     foldRight(as, 0)((_, acc) => acc + 1)
   }
 
+  def add1(list: List[Int]): List[Int] = {
+    foldLeft(list, Nil: List[Int])((t, h) => Cons(h + 1, t))
+  }
+
+  def double2String(list: List[Double]): List[String] = {
+    foldLeft(list, Nil: List[String])((t, h) => Cons(h.toString, t))
+  }
+
+  def map[A, B](as: List[A])(f: A => B): List[B] = {
+    as match {
+      case Nil => Nil
+      case Cons(head, tail) => Cons(f(head), map(tail)(f))
+    }
+  }
+
+  def map1[A, B](as: List[A])(f: A => B): List[B] = {
+    foldRightViaFoldLeft(as, Nil: List[B])((h, t) => Cons(f(h), t))
+  }
+
   def tail[A](l: List[A]): List[A] = {
     l match {
       case Nil => sys.error("tail of empty list")
@@ -71,13 +92,6 @@ object List {
   def apply[A](as: A*): List[A] = {
     if (as.isEmpty) Nil
     else Cons(as.head, apply(as.tail: _*))
-  }
-
-  def tail[A](list: List[A]): List[A] = {
-    list match {
-      case Nil => Nil
-      case Cons(_, tail) => tail
-    }
   }
 
   def setHead[A](list: List[A], head: A): List[A] = {
@@ -125,6 +139,31 @@ object List {
     foldLeft(l, (b: B) => b)((g, a) => b => g(f(a, b)))(z)
   }
 
+  /*
+  The discussion about `map` also applies here.
+  */
+  def filter[A](l: List[A])(f: A => Boolean): List[A] = {
+    foldRight(l, Nil: List[A])((h, t) => if (f(h)) Cons(h, t) else t)
+  }
+
+  def filter_1[A](l: List[A])(f: A => Boolean): List[A] = {
+    foldRightViaFoldLeft(l, Nil: List[A])((h, t) => if (f(h)) Cons(h, t) else t)
+  }
+
+  def filter_2[A](l: List[A])(f: A => Boolean): List[A] = {
+    val buf = new collection.mutable.ListBuffer[A]
+
+    def go(l: List[A]): Unit = {
+      l match {
+        case Nil => ()
+        case Cons(h, t) => if (f(h)) buf += h; go(t)
+      }
+    }
+
+    go(l)
+    List(buf.toList: _*) // converting from the standard Scala list to the list we've defined here
+  }
+
   def init2[A](l: List[A]): List[A] = {
     import collection.mutable.ListBuffer
     val buf = new ListBuffer[A]
@@ -149,11 +188,63 @@ object List {
     }
   }
 
+  def concat[A](l: List[List[A]]): List[A] = {
+    foldRight(l, Nil: List[A])(append)
+  }
+
+  def flatMap[A, B](as: List[A])(f: A => List[B]): List[B] = {
+    concat(map(as)(f))
+  }
+
+  def filterViaFlatMap[A](l: List[A])(f: A => Boolean): List[A] = {
+    flatMap(l)(a => if (f(a)) List(a) else Nil)
+  }
+
+  def addPairwise(a: List[Int], b: List[Int]): List[Int] = {
+    (a, b) match {
+      case (Nil, _) => Nil
+      case (_, Nil) => Nil
+      case (Cons(h1, t1), Cons(h2, t2)) => Cons(h1 + h2, addPairwise(t1, t2))
+    }
+  }
+
+  def addPairwise1[A](a: List[A], b: List[A])(f: (A, A) => A): List[A] = {
+    (a, b) match {
+      case (Nil, _) => Nil
+      case (_, Nil) => Nil
+      case (Cons(h1, t1), Cons(h2, t2)) => Cons(f(h1, h2), addPairwise1(t1, t2)(f))
+    }
+  }
+
+  /*
+  This function is usually called `zipWith`. The discussion about stack usage from the explanation of `map` also
+  applies here. By putting the `f` in the second argument list, Scala can infer its type from the previous argument list.
+  */
+  def zipWith[A, B, C](a: List[A], b: List[B])(f: (A, B) => C): List[C] = {
+    (a, b) match {
+      case (Nil, _) => Nil
+      case (_, Nil) => Nil
+      case (Cons(h1, t1), Cons(h2, t2)) => Cons(f(h1, h2), zipWith(t1, t2)(f))
+    }
+  }
+  @tailrec
+  def startsWith[A](l: List[A], prefix: List[A]): Boolean = (l,prefix) match {
+    case (_,Nil) => true
+    case (Cons(h,t),Cons(h2,t2)) if h == h2 => startsWith(t, t2)
+    case _ => false
+  }
+  @tailrec
+  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = sup match {
+    case Nil => sub == Nil
+    case _ if startsWith(sup, sub) => true
+    case Cons(h,t) => hasSubsequence(t, sub)
+  }
 }
 
 object ListTest extends App {
   val listInt = List(1, 2, 3, 4, 5, 6)
   println(List.sum3(listInt))
   val listDouble = List(1.0, 2.0, 3.0)
-  println(List.product3(listDouble))
+  val map = List.map1(listDouble)(x => x * 3);
+  println(map)
 }
